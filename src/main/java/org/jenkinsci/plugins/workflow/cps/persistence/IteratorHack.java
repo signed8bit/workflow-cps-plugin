@@ -29,6 +29,7 @@ import java.io.Serializable;
 import java.util.AbstractList;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -38,6 +39,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SortedMap;
 
 /**
  * Makes Java iterators effectively serializable.
@@ -95,6 +97,11 @@ public class IteratorHack {
     public static <E> Iterator<E> iterator(Set<E> set) {
         // TODO as above
         return new Itr<>(new ArrayList<>(set));
+    }
+
+    public static <E> Iterator<E> iterator(E[] array) {
+        // TODO as above
+        return new Itr<>(Arrays.asList(array));
     }
 
     private static final class ListItr<E> extends Itr<E> implements ListIterator<E> {
@@ -162,6 +169,11 @@ public class IteratorHack {
         return entries;
     }
 
+    public static <K, V> Set<Map.Entry<K, V>> entrySet(SortedMap<K, V> map) {
+        return entrySet((Map<K,V>)map);
+
+    }
+
     public static <K> Set<K> keySet(Map<K, ?> map) {
         if (!Caller.isAsynchronous(map, "keySet") && !Caller.isAsynchronous(IteratorHack.class, "keySet", map)) {
             return map.keySet();
@@ -169,11 +181,19 @@ public class IteratorHack {
         return new LinkedHashSet<>(map.keySet());
     }
 
+    public static <K> Set<K> keySet(SortedMap<K, ?> map) {
+        return keySet((Map<K,?>)map);
+    }
+
     public static <V> Collection<V> values(Map<?, V> map) {
         if (!Caller.isAsynchronous(map, "values") && !Caller.isAsynchronous(IteratorHack.class, "values", map)) {
             return map.values();
         }
         return new ArrayList<>(map.values());
+    }
+
+    public static <V> Collection<V> values(SortedMap<?, V> map) {
+        return values((Map<?,V>)map);
     }
 
     private IteratorHack() {}

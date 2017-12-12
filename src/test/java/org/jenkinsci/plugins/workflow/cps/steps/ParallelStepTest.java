@@ -226,6 +226,32 @@ public class ParallelStepTest extends SingleJobTestBase {
         throw new IllegalStateException("second problem");
     }
 
+    @Issue("JENKINS-26148")
+    @Test public void abort() {
+        story.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = story.j.jenkins.createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition("parallel a: {def r = semaphore 'a'; echo r}, b: {semaphore 'b'}", true));
+                WorkflowRun b1 = p.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("a/1", b1);
+                SemaphoreStep.waitForStart("b/1", b1);
+                b1.getExecutor().interrupt();
+                story.j.assertBuildStatus(Result.ABORTED, story.j.waitForCompletion(b1));
+                story.j.assertLogContains("Failed in branch a", b1);
+                story.j.assertLogContains("Failed in branch b", b1);
+                WorkflowRun b2 = p.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("a/2", b2);
+                SemaphoreStep.waitForStart("b/2", b2);
+                SemaphoreStep.success("a/2", "finished branch a");
+                story.j.waitForMessage("finished branch a", b2);
+                b2.getExecutor().interrupt();
+                story.j.assertBuildStatus(Result.ABORTED, story.j.waitForCompletion(b2));
+                story.j.assertLogNotContains("Failed in branch a", b2);
+                story.j.assertLogContains("Failed in branch b", b2);
+            }
+        });
+    }
+
     @Test
     public void localMethodCallWithinBranch() {
         story.addStep(new Statement() {
@@ -466,4 +492,25 @@ public class ParallelStepTest extends SingleJobTestBase {
         });
     }
 
+    @Issue("JENKINS-38268")
+    @Test
+    public void parallelLexicalScope() throws Exception {
+        story.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                p = jenkins().createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition("def fn = { arg ->\n" +
+                        "    arg.count = arg.count + 1;\n" +
+                        "}\n" +
+                        "def a = [ id: 'a', count : 0 ];\n" +
+                        "def b = [ id: 'b', count : 0 ];\n" +
+                        "parallel(\n" +
+                        "    StepA : { fn(a); },\n" +
+                        "    StepB : { fn(b); },\n" +
+                        ");\n" +
+                        "assert a.count == 1;\n" +
+                        "assert b.count == 1;\n", true));
+                story.j.buildAndAssertSuccess(p);
+            }
+        });
+    }
 }

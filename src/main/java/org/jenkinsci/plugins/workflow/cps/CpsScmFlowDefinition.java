@@ -113,7 +113,6 @@ public class CpsScmFlowDefinition extends FlowDefinition {
                 }
             }
         }
-        listener.getLogger().println("Checking out " + scm.getKey() + " to read " + scriptPath);
         FilePath dir;
         Node node = Jenkins.getActiveInstance();
         if (build.getParent() instanceof TopLevelItem) {
@@ -125,6 +124,7 @@ public class CpsScmFlowDefinition extends FlowDefinition {
         } else { // should not happen, but just in case:
             dir = new FilePath(owner.getRootDir());
         }
+        listener.getLogger().println("Checking out " + scm.getKey() + " into " + dir + " to read " + scriptPath);
         String script;
         Computer computer = node.toComputer();
         if (computer == null) {
