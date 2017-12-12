@@ -61,7 +61,6 @@ public class CpsScmFlowDefinition extends FlowDefinition {
 
     private final SCM scm;
     private final String scriptPath;
-    private boolean ignoreMissingScript;
     private boolean lightweight;
 
     @DataBoundConstructor public CpsScmFlowDefinition(SCM scm, String scriptPath) {
@@ -75,14 +74,6 @@ public class CpsScmFlowDefinition extends FlowDefinition {
 
     public String getScriptPath() {
         return scriptPath;
-    }
-
-    public boolean isIgnoreMissingScript() {
-        return ignoreMissingScript;
-    }
-
-    @DataBoundSetter public void setIgnoreMissingScript(boolean ignoreMissingScript) {
-        this.ignoreMissingScript = ignoreMissingScript;
     }
 
     public boolean isLightweight() {
@@ -111,13 +102,9 @@ public class CpsScmFlowDefinition extends FlowDefinition {
                     try {
                         script = fs.child(scriptPath).contentAsString();
                     } catch (java.io.FileNotFoundException e) {
-                        if (isIgnoreMissingScript()) {
-                            // Set script to an empty string to mimic an empty scriptFile
-                            script = "";
-                            listener.getLogger().println("The file " + scriptPath + " from " + scm.getKey() + " was not found, ignoring");
-                        } else {
-                            throw e;
-                        }
+                        // Set script to an empty string to mimic an empty scriptFile
+                        script = "";
+                        listener.getLogger().println("The file " + scriptPath + " from " + scm.getKey() + " was not found, ignoring");
                     }
                     listener.getLogger().println("Obtained " + scriptPath + " from " + scm.getKey());
                     return new CpsFlowExecution(script, true, owner);
@@ -153,17 +140,12 @@ public class CpsScmFlowDefinition extends FlowDefinition {
                 throw new IOException(scriptFile + " is not inside " + dir);
             }
             if (!scriptFile.exists()) {
-                if (isIgnoreMissingScript()) {
-                    // Set script to an empty string to mimic an empty scriptFile
-                    script = "";
-                    listener.getLogger().println("The file " + scriptPath + " from " + scm.getKey() + " was not found, ignoring");
-                } else {
-                    throw new AbortException(scriptFile + " not found");
-                }
+                // Set script to an empty string to mimic an empty scriptFile
+                script = "";
+                listener.getLogger().println("The file " + scriptPath + " from " + scm.getKey() + " was not found, ignoring");
             } else {
                 script = scriptFile.readToString();
             }
-
         }
         CpsFlowExecution exec = new CpsFlowExecution(script, true, owner);
         exec.flowStartNodeActions.add(new WorkspaceActionImpl(dir, null));
